@@ -1,0 +1,87 @@
+TCPClient client;
+byte[] server = {52, 8, 182, 52};
+int port = 5000;
+unsigned long lastTime = 0; // ??
+unsigned long interval = 10000;
+void setup()
+{
+    Serial.begin(9600);  // Begin the serial monitor at 9600bps
+    //open connection with server 52.8.182.52 port 5000
+    if(client.connect(server, port)){
+        Serial.println("connected");
+    }
+    else{
+        Serial.println("connection failed")
+    }
+        
+    
+}
+
+void loop()
+{
+    //discover new bluetooth devices and send http post
+    //if bluetooth devices disappear, send post
+    //monitor rssi of each device to determine distance
+    //client.println("POST somethingsomething)
+    
+    
+    
+    // Get current millis();
+    unsigned long currentTime = millis();
+    // Check if its already time for our process
+    if((currentTime - lastTime) > interval) {
+        lastTime = currentTime;
+        // Enter command mode
+        Serial1.print("$$$");
+        //Wait a bit for the module to respond
+        delay(200);
+        // Start the inquiry scan
+        Serial1.println("IN,2");
+        delay(5000);
+        int h = Serial1.available();
+        if(h >= 42) { // we know there is a bluetooth device
+            char *id = readSerial(h);
+            char *str;
+            while((str = strtok_r(id, "\n", &id)) != NULL) {
+                if(strncmp(str, cell,19) == 0) {
+                    Serial.print("Found Fritz cellphone with id: ");
+                    Serial.println(str);
+                } else if(strncmp(str,laptop,19) == 0) {
+                    Serial.print("Found Fritz laptop with id: ");
+                    Serial.println(str);
+                }
+            }
+        } else if(h <= 21) { // we know there is no bluetooth device
+            Serial.println("No device found");
+        }
+        Serial1.println("---");
+
+    }
+    clearAll();
+}
+
+void clearAll() {
+    for(int i = 0; i < Serial1.available(); i++) {
+        Serial1.read();
+    }
+}
+
+// a bit hacked...
+char* readSerial(int h) {
+    char input;
+    char buffer[100];
+    if (Serial1.available() > 0) {
+        int j = 0;
+        for (int i = 0; i < h; i++) { // the id's start at char 21, se we copy from there
+            input = (char)Serial1.read();
+            if(i >= 21) {
+                buffer[j] = input;
+                buffer[j+1] = '\0';
+                j++;
+            }
+        }
+        return buffer;
+    } else {
+        return "No Data";
+    }
+}
